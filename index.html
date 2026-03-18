@@ -45,6 +45,9 @@
           </div>
         </div>
 
+        <label for="due-date">마감일</label>
+        <input id="due-date" name="dueDate" type="date" />
+
         <div class="actions">
           <button type="submit" id="save-btn">저장</button>
           <button type="button" id="reset-btn" class="ghost">초기화</button>
@@ -134,7 +137,10 @@
       </div>
       <p class="task-desc"></p>
       <div class="task-foot">
-        <small class="timestamp"></small>
+        <div class="meta">
+          <small class="due-chip hidden"></small>
+          <small class="timestamp"></small>
+        </div>
         <div class="card-actions">
           <button class="edit">수정</button>
           <button class="delete danger">삭제</button>

@@ -6,6 +6,7 @@ const titleInput = document.getElementById("title");
 const descriptionInput = document.getElementById("description");
 const priorityInput = document.getElementById("priority");
 const statusInput = document.getElementById("status");
+const dueDateInput = document.getElementById("due-date");
 const resetBtn = document.getElementById("reset-btn");
 const board = document.getElementById("board");
 const singleListPanel = document.getElementById("single-list-panel");
@@ -84,7 +85,33 @@ function resetForm() {
   descriptionInput.value = "";
   priorityInput.value = "medium";
   statusInput.value = "todo";
+  dueDateInput.value = "";
   titleInput.focus();
+}
+
+function getDueInfo(task) {
+  if (!task.dueDate) return { state: "none", label: "" };
+
+  const end = new Date(`${task.dueDate}T23:59:59`);
+  if (Number.isNaN(end.getTime())) return { state: "none", label: "" };
+
+  const dayMs = 24 * 60 * 60 * 1000;
+  const now = new Date();
+  const daysLeft = Math.ceil((end.getTime() - now.getTime()) / dayMs);
+
+  if (task.status === "done") {
+    return { state: "normal", label: `완료 (${task.dueDate})` };
+  }
+
+  if (daysLeft < 0) {
+    return { state: "overdue", label: `기한지남 D+${Math.abs(daysLeft)} (${task.dueDate})` };
+  }
+
+  if (daysLeft <= 2) {
+    return { state: "soon", label: `임박 D-${daysLeft} (${task.dueDate})` };
+  }
+
+  return { state: "normal", label: `마감 D-${daysLeft} (${task.dueDate})` };
 }
 
 function getFilteredOrderedTasks() {
@@ -119,6 +146,18 @@ function createTaskNode(task) {
   node.querySelector(".task-desc").textContent = task.description || "설명 없음";
   node.querySelector(".priority").textContent = `우선순위: ${priorityLabel(task.priority)}`;
   node.querySelector(".timestamp").textContent = `수정 ${formatDate(task.updatedAt)}`;
+  const dueChip = node.querySelector(".due-chip");
+  const dueInfo = getDueInfo(task);
+  if (dueInfo.state === "none") {
+    dueChip.classList.add("hidden");
+    node.dataset.due = "none";
+  } else {
+    dueChip.classList.remove("hidden");
+    dueChip.textContent = dueInfo.label;
+    dueChip.classList.remove("due-soon", "due-overdue", "due-normal");
+    dueChip.classList.add(`due-${dueInfo.state}`);
+    node.dataset.due = dueInfo.state;
+  }
 
   node.querySelector(".edit").addEventListener("click", () => {
     idInput.value = task.id;
@@ -126,6 +165,7 @@ function createTaskNode(task) {
     descriptionInput.value = task.description;
     priorityInput.value = task.priority;
     statusInput.value = task.status;
+    dueDateInput.value = task.dueDate || "";
     titleInput.focus();
   });
 
@@ -271,7 +311,8 @@ form.addEventListener("submit", (event) => {
     title,
     description: descriptionInput.value.trim(),
     priority: priorityInput.value,
-    status: statusInput.value
+    status: statusInput.value,
+    dueDate: dueDateInput.value
   };
 
   const targetId = idInput.value;
