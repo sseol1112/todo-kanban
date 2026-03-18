@@ -7,6 +7,9 @@ const descriptionInput = document.getElementById("description");
 const priorityInput = document.getElementById("priority");
 const statusInput = document.getElementById("status");
 const resetBtn = document.getElementById("reset-btn");
+const filterStatusInput = document.getElementById("filter-status");
+const filterPriorityInput = document.getElementById("filter-priority");
+const filterDateInput = document.getElementById("filter-date");
 
 const lists = {
   todo: document.getElementById("todo-list"),
@@ -23,6 +26,11 @@ const counts = {
 const template = document.getElementById("task-template");
 
 let tasks = loadTasks();
+let filters = {
+  status: "all",
+  priority: "all",
+  date: "newest"
+};
 
 function loadTasks() {
   try {
@@ -77,7 +85,22 @@ function render() {
     list.innerHTML = "";
   });
 
-  const ordered = [...tasks].sort((a, b) => {
+  const filtered = tasks.filter((task) => {
+    const statusMatch = filters.status === "all" || task.status === filters.status;
+    const priorityMatch = filters.priority === "all" || task.priority === filters.priority;
+    return statusMatch && priorityMatch;
+  });
+
+  const ordered = [...filtered].sort((a, b) => {
+    const dateA = new Date(a.createdAt).getTime();
+    const dateB = new Date(b.createdAt).getTime();
+
+    if (filters.date === "oldest") {
+      if (dateA !== dateB) return dateA - dateB;
+    } else if (dateA !== dateB) {
+      return dateB - dateA;
+    }
+
     const p = getPriorityOrder(a.priority) - getPriorityOrder(b.priority);
     if (p !== 0) return p;
     return new Date(b.updatedAt) - new Date(a.updatedAt);
@@ -116,9 +139,9 @@ function render() {
     lists[task.status].appendChild(node);
   });
 
-  counts.todo.textContent = String(tasks.filter((task) => task.status === "todo").length);
-  counts.doing.textContent = String(tasks.filter((task) => task.status === "doing").length);
-  counts.done.textContent = String(tasks.filter((task) => task.status === "done").length);
+  counts.todo.textContent = String(filtered.filter((task) => task.status === "todo").length);
+  counts.doing.textContent = String(filtered.filter((task) => task.status === "doing").length);
+  counts.done.textContent = String(filtered.filter((task) => task.status === "done").length);
 }
 
 form.addEventListener("submit", (event) => {
@@ -157,6 +180,20 @@ form.addEventListener("submit", (event) => {
 });
 
 resetBtn.addEventListener("click", resetForm);
+filterStatusInput.addEventListener("change", () => {
+  filters.status = filterStatusInput.value;
+  render();
+});
+
+filterPriorityInput.addEventListener("change", () => {
+  filters.priority = filterPriorityInput.value;
+  render();
+});
+
+filterDateInput.addEventListener("change", () => {
+  filters.date = filterDateInput.value;
+  render();
+});
 
 Object.entries(lists).forEach(([status, zone]) => {
   zone.addEventListener("dragover", (event) => {

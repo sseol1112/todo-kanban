@@ -50,6 +50,31 @@
           <button type="button" id="reset-btn" class="ghost">초기화</button>
         </div>
       </form>
+
+      <section class="filter-box" aria-label="작업 필터">
+        <h2>필터</h2>
+        <label for="filter-status">작업상태</label>
+        <select id="filter-status">
+          <option value="all" selected>전체</option>
+          <option value="todo">진행예정</option>
+          <option value="doing">진행중</option>
+          <option value="done">완료</option>
+        </select>
+
+        <label for="filter-priority">우선순위</label>
+        <select id="filter-priority">
+          <option value="all" selected>전체</option>
+          <option value="high">높음</option>
+          <option value="medium">보통</option>
+          <option value="low">낮음</option>
+        </select>
+
+        <label for="filter-date">등록일</label>
+        <select id="filter-date">
+          <option value="newest" selected>최신 등록순</option>
+          <option value="oldest">오래된 등록순</option>
+        </select>
+      </section>
     </section>
 
     <section class="board" id="board">

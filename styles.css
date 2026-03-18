@@ -81,6 +81,18 @@ body {
   font-weight: 800;
 }
 
+.filter-box {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid #e8edf3;
+}
+
+.filter-box h2 {
+  margin: 0 0 10px;
+  font-size: 0.95rem;
+  font-weight: 800;
+}
+
 label {
   display: block;
   margin-bottom: 6px;
