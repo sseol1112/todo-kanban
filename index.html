@@ -50,57 +50,79 @@
           <button type="button" id="reset-btn" class="ghost">초기화</button>
         </div>
       </form>
-
-      <section class="filter-box" aria-label="작업 필터">
-        <h2>필터</h2>
-        <label for="filter-status">작업상태</label>
-        <select id="filter-status">
-          <option value="all" selected>전체</option>
-          <option value="todo">진행예정</option>
-          <option value="doing">진행중</option>
-          <option value="done">완료</option>
-        </select>
-
-        <label for="filter-priority">우선순위</label>
-        <select id="filter-priority">
-          <option value="all" selected>전체</option>
-          <option value="high">높음</option>
-          <option value="medium">보통</option>
-          <option value="low">낮음</option>
-        </select>
-
-        <label for="filter-date">등록일</label>
-        <select id="filter-date">
-          <option value="newest" selected>최신 등록순</option>
-          <option value="oldest">오래된 등록순</option>
-        </select>
-      </section>
     </section>
 
-    <section class="board" id="board">
-      <article class="column" data-status="todo">
-        <header>
-          <h3>진행예정</h3>
-          <span class="count" id="count-todo">0</span>
-        </header>
-        <div class="dropzone" id="todo-list"></div>
-      </article>
+    <section class="content-area">
+      <section class="panel filter-bar" aria-label="작업 필터">
+        <div class="filter-row">
+          <div class="filter-item">
+            <label for="filter-view">보기</label>
+            <select id="filter-view">
+              <option value="board" selected>칸반 보드</option>
+              <option value="list">단일 목록</option>
+            </select>
+          </div>
+          <div class="filter-item">
+            <label for="filter-status">작업상태</label>
+            <select id="filter-status">
+              <option value="all" selected>전체</option>
+              <option value="todo">진행예정</option>
+              <option value="doing">진행중</option>
+              <option value="done">완료</option>
+            </select>
+          </div>
+          <div class="filter-item">
+            <label for="filter-priority">우선순위</label>
+            <select id="filter-priority">
+              <option value="all" selected>전체</option>
+              <option value="high">높음</option>
+              <option value="medium">보통</option>
+              <option value="low">낮음</option>
+            </select>
+          </div>
+          <div class="filter-item">
+            <label for="filter-date">등록일</label>
+            <select id="filter-date">
+              <option value="newest" selected>최신 등록순</option>
+              <option value="oldest">오래된 등록순</option>
+            </select>
+          </div>
+        </div>
+      </section>
 
-      <article class="column" data-status="doing">
-        <header>
-          <h3>진행중</h3>
-          <span class="count" id="count-doing">0</span>
-        </header>
-        <div class="dropzone" id="doing-list"></div>
-      </article>
+      <section class="board" id="board">
+        <article class="column" data-status="todo">
+          <header>
+            <h3>진행예정</h3>
+            <span class="count" id="count-todo">0</span>
+          </header>
+          <div class="dropzone" id="todo-list"></div>
+        </article>
 
-      <article class="column" data-status="done">
+        <article class="column" data-status="doing">
+          <header>
+            <h3>진행중</h3>
+            <span class="count" id="count-doing">0</span>
+          </header>
+          <div class="dropzone" id="doing-list"></div>
+        </article>
+
+        <article class="column" data-status="done">
+          <header>
+            <h3>완료</h3>
+            <span class="count" id="count-done">0</span>
+          </header>
+          <div class="dropzone" id="done-list"></div>
+        </article>
+      </section>
+
+      <section class="panel single-list hidden" id="single-list-panel">
         <header>
-          <h3>완료</h3>
-          <span class="count" id="count-done">0</span>
+          <h3>작업 목록</h3>
+          <span class="count" id="count-all">0</span>
         </header>
-        <div class="dropzone" id="done-list"></div>
-      </article>
+        <div class="dropzone list-dropzone" id="all-list"></div>
+      </section>
     </section>
   </main>
 

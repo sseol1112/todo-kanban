@@ -7,6 +7,11 @@ const descriptionInput = document.getElementById("description");
 const priorityInput = document.getElementById("priority");
 const statusInput = document.getElementById("status");
 const resetBtn = document.getElementById("reset-btn");
+const board = document.getElementById("board");
+const singleListPanel = document.getElementById("single-list-panel");
+const allList = document.getElementById("all-list");
+const countAll = document.getElementById("count-all");
+const filterViewInput = document.getElementById("filter-view");
 const filterStatusInput = document.getElementById("filter-status");
 const filterPriorityInput = document.getElementById("filter-priority");
 const filterDateInput = document.getElementById("filter-date");
@@ -27,10 +32,12 @@ const template = document.getElementById("task-template");
 
 let tasks = loadTasks();
 let filters = {
+  view: "board",
   status: "all",
   priority: "all",
   date: "newest"
 };
+let activeTouchDrag = null;
 
 function loadTasks() {
   try {
@@ -80,18 +87,14 @@ function resetForm() {
   titleInput.focus();
 }
 
-function render() {
-  Object.values(lists).forEach((list) => {
-    list.innerHTML = "";
-  });
-
+function getFilteredOrderedTasks() {
   const filtered = tasks.filter((task) => {
     const statusMatch = filters.status === "all" || task.status === filters.status;
     const priorityMatch = filters.priority === "all" || task.priority === filters.priority;
     return statusMatch && priorityMatch;
   });
 
-  const ordered = [...filtered].sort((a, b) => {
+  return [...filtered].sort((a, b) => {
     const dateA = new Date(a.createdAt).getTime();
     const dateB = new Date(b.createdAt).getTime();
 
@@ -105,43 +108,157 @@ function render() {
     if (p !== 0) return p;
     return new Date(b.updatedAt) - new Date(a.updatedAt);
   });
+}
 
-  ordered.forEach((task) => {
-    const node = template.content.firstElementChild.cloneNode(true);
-    node.dataset.id = task.id;
-    node.dataset.priority = task.priority;
+function createTaskNode(task) {
+  const node = template.content.firstElementChild.cloneNode(true);
+  node.dataset.id = task.id;
+  node.dataset.priority = task.priority;
 
-    node.querySelector(".task-title").textContent = task.title;
-    node.querySelector(".task-desc").textContent = task.description || "설명 없음";
-    node.querySelector(".priority").textContent = `우선순위: ${priorityLabel(task.priority)}`;
-    node.querySelector(".timestamp").textContent = `수정 ${formatDate(task.updatedAt)}`;
+  node.querySelector(".task-title").textContent = task.title;
+  node.querySelector(".task-desc").textContent = task.description || "설명 없음";
+  node.querySelector(".priority").textContent = `우선순위: ${priorityLabel(task.priority)}`;
+  node.querySelector(".timestamp").textContent = `수정 ${formatDate(task.updatedAt)}`;
 
-    node.querySelector(".edit").addEventListener("click", () => {
-      idInput.value = task.id;
-      titleInput.value = task.title;
-      descriptionInput.value = task.description;
-      priorityInput.value = task.priority;
-      statusInput.value = task.status;
-      titleInput.focus();
-    });
-
-    node.querySelector(".delete").addEventListener("click", () => {
-      tasks = tasks.filter((t) => t.id !== task.id);
-      saveTasks();
-      render();
-    });
-
-    node.addEventListener("dragstart", (event) => {
-      event.dataTransfer.setData("text/plain", task.id);
-      event.dataTransfer.effectAllowed = "move";
-    });
-
-    lists[task.status].appendChild(node);
+  node.querySelector(".edit").addEventListener("click", () => {
+    idInput.value = task.id;
+    titleInput.value = task.title;
+    descriptionInput.value = task.description;
+    priorityInput.value = task.priority;
+    statusInput.value = task.status;
+    titleInput.focus();
   });
 
-  counts.todo.textContent = String(filtered.filter((task) => task.status === "todo").length);
-  counts.doing.textContent = String(filtered.filter((task) => task.status === "doing").length);
-  counts.done.textContent = String(filtered.filter((task) => task.status === "done").length);
+  node.querySelector(".delete").addEventListener("click", () => {
+    tasks = tasks.filter((t) => t.id !== task.id);
+    saveTasks();
+    render();
+  });
+
+  node.addEventListener("dragstart", (event) => {
+    event.dataTransfer.setData("text/plain", task.id);
+    event.dataTransfer.effectAllowed = "move";
+  });
+
+  node.addEventListener("pointerdown", (event) => {
+    if (event.pointerType !== "touch") return;
+    if (event.target.closest("button")) return;
+    startTouchDrag(event, node, task.id);
+  });
+
+  return node;
+}
+
+function render() {
+  Object.values(lists).forEach((list) => {
+    list.innerHTML = "";
+  });
+  allList.innerHTML = "";
+
+  const ordered = getFilteredOrderedTasks();
+
+  ordered.forEach((task) => {
+    const node = createTaskNode(task);
+    if (filters.view === "list") {
+      allList.appendChild(node);
+    } else {
+      lists[task.status].appendChild(node);
+    }
+  });
+
+  counts.todo.textContent = String(ordered.filter((task) => task.status === "todo").length);
+  counts.doing.textContent = String(ordered.filter((task) => task.status === "doing").length);
+  counts.done.textContent = String(ordered.filter((task) => task.status === "done").length);
+  countAll.textContent = String(ordered.length);
+
+  if (filters.view === "list") {
+    board.classList.add("hidden");
+    singleListPanel.classList.remove("hidden");
+  } else {
+    board.classList.remove("hidden");
+    singleListPanel.classList.add("hidden");
+  }
+}
+
+function moveTaskToStatus(taskId, status) {
+  tasks = tasks.map((task) => {
+    if (task.id !== taskId) return task;
+    return {
+      ...task,
+      status,
+      updatedAt: new Date().toISOString()
+    };
+  });
+  saveTasks();
+  render();
+}
+
+function clearTouchDragState() {
+  if (!activeTouchDrag) return;
+  if (activeTouchDrag.ghost?.parentNode) {
+    activeTouchDrag.ghost.parentNode.removeChild(activeTouchDrag.ghost);
+  }
+  if (activeTouchDrag.currentZone) {
+    activeTouchDrag.currentZone.classList.remove("drag-over");
+  }
+  activeTouchDrag = null;
+}
+
+function startTouchDrag(event, node, taskId) {
+  if (filters.view !== "board") return;
+  clearTouchDragState();
+
+  const rect = node.getBoundingClientRect();
+  const ghost = node.cloneNode(true);
+  ghost.classList.add("touch-ghost");
+  ghost.style.width = `${rect.width}px`;
+  ghost.style.left = `${event.clientX - rect.width / 2}px`;
+  ghost.style.top = `${event.clientY - rect.height / 2}px`;
+  document.body.appendChild(ghost);
+
+  activeTouchDrag = {
+    taskId,
+    ghost,
+    pointerId: event.pointerId,
+    currentZone: null
+  };
+  node.setPointerCapture(event.pointerId);
+
+  const onPointerMove = (moveEvent) => {
+    if (!activeTouchDrag || moveEvent.pointerId !== activeTouchDrag.pointerId) return;
+    moveEvent.preventDefault();
+
+    ghost.style.left = `${moveEvent.clientX - rect.width / 2}px`;
+    ghost.style.top = `${moveEvent.clientY - rect.height / 2}px`;
+
+    const target = document.elementFromPoint(moveEvent.clientX, moveEvent.clientY);
+    const zone = target ? target.closest(".dropzone[data-status]") : null;
+
+    if (activeTouchDrag.currentZone && activeTouchDrag.currentZone !== zone) {
+      activeTouchDrag.currentZone.classList.remove("drag-over");
+    }
+    if (zone) zone.classList.add("drag-over");
+    activeTouchDrag.currentZone = zone;
+  };
+
+  const onPointerEnd = (endEvent) => {
+    if (!activeTouchDrag || endEvent.pointerId !== activeTouchDrag.pointerId) return;
+    const zone = activeTouchDrag.currentZone;
+    const status = zone ? zone.dataset.status : "";
+    clearTouchDragState();
+
+    if (status) {
+      moveTaskToStatus(taskId, status);
+    }
+
+    node.removeEventListener("pointermove", onPointerMove);
+    node.removeEventListener("pointerup", onPointerEnd);
+    node.removeEventListener("pointercancel", onPointerEnd);
+  };
+
+  node.addEventListener("pointermove", onPointerMove);
+  node.addEventListener("pointerup", onPointerEnd);
+  node.addEventListener("pointercancel", onPointerEnd);
 }
 
 form.addEventListener("submit", (event) => {
@@ -180,6 +297,11 @@ form.addEventListener("submit", (event) => {
 });
 
 resetBtn.addEventListener("click", resetForm);
+filterViewInput.addEventListener("change", () => {
+  filters.view = filterViewInput.value;
+  render();
+});
+
 filterStatusInput.addEventListener("change", () => {
   filters.status = filterStatusInput.value;
   render();
@@ -196,6 +318,8 @@ filterDateInput.addEventListener("change", () => {
 });
 
 Object.entries(lists).forEach(([status, zone]) => {
+  zone.dataset.status = status;
+
   zone.addEventListener("dragover", (event) => {
     event.preventDefault();
     zone.classList.add("drag-over");
@@ -212,17 +336,7 @@ Object.entries(lists).forEach(([status, zone]) => {
     const taskId = event.dataTransfer.getData("text/plain");
     if (!taskId) return;
 
-    tasks = tasks.map((task) => {
-      if (task.id !== taskId) return task;
-      return {
-        ...task,
-        status,
-        updatedAt: new Date().toISOString()
-      };
-    });
-
-    saveTasks();
-    render();
+    moveTaskToStatus(taskId, status);
   });
 });
 
