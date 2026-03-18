@@ -1,0 +1,102 @@
+﻿<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Work Todo Kanban</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <h1>업무용 Todo Kanban</h1>
+    <p>우선순위 + 드래그앤드롭 + CRUD</p>
+  </header>
+
+  <main class="container">
+    <section class="panel form-panel">
+      <h2>작업 추가 / 수정</h2>
+      <form id="task-form" autocomplete="off">
+        <input type="hidden" id="task-id" />
+
+        <label for="title">제목</label>
+        <input id="title" name="title" type="text" maxlength="80" required placeholder="예: API 문서 업데이트" />
+
+        <label for="description">설명</label>
+        <textarea id="description" name="description" rows="3" maxlength="300" placeholder="상세 내용"></textarea>
+
+        <div class="row">
+          <div>
+            <label for="priority">우선순위</label>
+            <select id="priority" name="priority">
+              <option value="high">높음</option>
+              <option value="medium" selected>보통</option>
+              <option value="low">낮음</option>
+            </select>
+          </div>
+          <div>
+            <label for="status">상태</label>
+            <select id="status" name="status">
+              <option value="todo" selected>진행예정</option>
+              <option value="doing">진행중</option>
+              <option value="done">완료</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button type="submit" id="save-btn">저장</button>
+          <button type="button" id="reset-btn" class="ghost">초기화</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="board" id="board">
+      <article class="column" data-status="todo">
+        <header>
+          <h3>진행예정</h3>
+          <span class="count" id="count-todo">0</span>
+        </header>
+        <div class="dropzone" id="todo-list"></div>
+      </article>
+
+      <article class="column" data-status="doing">
+        <header>
+          <h3>진행중</h3>
+          <span class="count" id="count-doing">0</span>
+        </header>
+        <div class="dropzone" id="doing-list"></div>
+      </article>
+
+      <article class="column" data-status="done">
+        <header>
+          <h3>완료</h3>
+          <span class="count" id="count-done">0</span>
+        </header>
+        <div class="dropzone" id="done-list"></div>
+      </article>
+    </section>
+  </main>
+
+  <template id="task-template">
+    <div class="task" draggable="true">
+      <div class="task-head">
+        <strong class="task-title"></strong>
+        <span class="priority"></span>
+      </div>
+      <p class="task-desc"></p>
+      <div class="task-foot">
+        <small class="timestamp"></small>
+        <div class="card-actions">
+          <button class="edit">수정</button>
+          <button class="delete danger">삭제</button>
+        </div>
+      </div>
+    </div>
+  </template>
+
+  <script src="app.js"></script>
+</body>
+</html>
