@@ -11,11 +11,31 @@
 </head>
 <body>
   <header class="topbar">
-    <h1>To-do Works Board</h1>    
+    <h1>To-do Works List Board</h1>    
   </header>
 
   <main class="container">
     <section class="panel form-panel">
+      <h2>계정</h2>
+      <div class="auth-panel">
+        <label for="auth-email">이메일</label>
+        <input id="auth-email" type="email" placeholder="you@example.com" autocomplete="email" />
+
+        <label for="auth-password">비밀번호</label>
+        <input id="auth-password" type="password" placeholder="비밀번호" autocomplete="current-password" />
+
+        <div class="actions">
+          <button type="button" id="login-btn">로그인</button>
+          <button type="button" id="signup-btn" class="ghost">회원가입</button>
+        </div>
+
+        <div class="actions hidden" id="logout-wrap">
+          <button type="button" id="logout-btn" class="ghost">로그아웃</button>
+        </div>
+
+        <small id="auth-status">로그인하면 사용자별로 동기화됩니다.</small>
+      </div>
+
       <h2>작업 추가 / 수정</h2>
       <form id="task-form" autocomplete="off">
         <input type="hidden" id="task-id" />
@@ -149,6 +169,10 @@
     </div>
   </template>
 
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
+  <script src="firebase-config.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

@@ -17,6 +17,14 @@ const filterStatusInput = document.getElementById("filter-status");
 const filterPriorityInput = document.getElementById("filter-priority");
 const filterDateInput = document.getElementById("filter-date");
 
+const authEmailInput = document.getElementById("auth-email");
+const authPasswordInput = document.getElementById("auth-password");
+const loginBtn = document.getElementById("login-btn");
+const signupBtn = document.getElementById("signup-btn");
+const logoutBtn = document.getElementById("logout-btn");
+const logoutWrap = document.getElementById("logout-wrap");
+const authStatus = document.getElementById("auth-status");
+
 const lists = {
   todo: document.getElementById("todo-list"),
   doing: document.getElementById("doing-list"),
@@ -31,7 +39,7 @@ const counts = {
 
 const template = document.getElementById("task-template");
 
-let tasks = loadTasks();
+let tasks = [];
 let filters = {
   view: "board",
   status: "all",
@@ -40,7 +48,13 @@ let filters = {
 };
 let activeTouchDrag = null;
 
-function loadTasks() {
+let firebaseReady = false;
+let auth = null;
+let db = null;
+let currentUser = null;
+let unsubscribeTasks = null;
+
+function loadTasksFromLocal() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     const parsed = raw ? JSON.parse(raw) : [];
@@ -51,8 +65,20 @@ function loadTasks() {
   }
 }
 
-function saveTasks() {
+function saveTasksToLocal() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+}
+
+function setAuthStatus(message, isError = false) {
+  authStatus.textContent = message;
+  authStatus.classList.toggle("error", isError);
+}
+
+function setTaskFormEnabled(enabled) {
+  const controls = form.querySelectorAll("input, textarea, select, button");
+  controls.forEach((control) => {
+    control.disabled = !enabled;
+  });
 }
 
 function getPriorityOrder(priority) {
@@ -114,6 +140,19 @@ function getDueInfo(task) {
   return { state: "normal", label: `마감 D-${daysLeft} (${task.dueDate})` };
 }
 
+function normalizeTask(raw) {
+  return {
+    id: raw.id,
+    title: raw.title || "",
+    description: raw.description || "",
+    priority: raw.priority || "medium",
+    status: raw.status || "todo",
+    dueDate: raw.dueDate || "",
+    createdAt: raw.createdAt || new Date().toISOString(),
+    updatedAt: raw.updatedAt || new Date().toISOString()
+  };
+}
+
 function getFilteredOrderedTasks() {
   const filtered = tasks.filter((task) => {
     const statusMatch = filters.status === "all" || task.status === filters.status;
@@ -146,6 +185,7 @@ function createTaskNode(task) {
   node.querySelector(".task-desc").textContent = task.description || "설명 없음";
   node.querySelector(".priority").textContent = `우선순위: ${priorityLabel(task.priority)}`;
   node.querySelector(".timestamp").textContent = `수정 ${formatDate(task.updatedAt)}`;
+
   const dueChip = node.querySelector(".due-chip");
   const dueInfo = getDueInfo(task);
   if (dueInfo.state === "none") {
@@ -170,9 +210,7 @@ function createTaskNode(task) {
   });
 
   node.querySelector(".delete").addEventListener("click", () => {
-    tasks = tasks.filter((t) => t.id !== task.id);
-    saveTasks();
-    render();
+    void deleteTask(task.id);
   });
 
   node.addEventListener("dragstart", (event) => {
@@ -218,19 +256,6 @@ function render() {
     board.classList.remove("hidden");
     singleListPanel.classList.add("hidden");
   }
-}
-
-function moveTaskToStatus(taskId, status) {
-  tasks = tasks.map((task) => {
-    if (task.id !== taskId) return task;
-    return {
-      ...task,
-      status,
-      updatedAt: new Date().toISOString()
-    };
-  });
-  saveTasks();
-  render();
 }
 
 function clearTouchDragState() {
@@ -288,7 +313,7 @@ function startTouchDrag(event, node, taskId) {
     clearTouchDragState();
 
     if (status) {
-      moveTaskToStatus(taskId, status);
+      void moveTaskToStatus(taskId, status);
     }
 
     node.removeEventListener("pointermove", onPointerMove);
@@ -301,22 +326,35 @@ function startTouchDrag(event, node, taskId) {
   node.addEventListener("pointercancel", onPointerEnd);
 }
 
-form.addEventListener("submit", (event) => {
-  event.preventDefault();
+function getTasksCollection(uid) {
+  return db.collection("users").doc(uid).collection("tasks");
+}
 
-  const title = titleInput.value.trim();
-  if (!title) return;
-
-  const payload = {
-    title,
-    description: descriptionInput.value.trim(),
-    priority: priorityInput.value,
-    status: statusInput.value,
-    dueDate: dueDateInput.value
-  };
-
-  const targetId = idInput.value;
+async function upsertTask(payload, targetId) {
   const now = new Date().toISOString();
+
+  if (firebaseReady) {
+    if (!currentUser) {
+      setAuthStatus("로그인 후 저장할 수 있습니다.", true);
+      return;
+    }
+
+    const collection = getTasksCollection(currentUser.uid);
+
+    if (targetId) {
+      await collection.doc(targetId).update({
+        ...payload,
+        updatedAt: now
+      });
+    } else {
+      await collection.add({
+        ...payload,
+        createdAt: now,
+        updatedAt: now
+      });
+    }
+    return;
+  }
 
   if (targetId) {
     tasks = tasks.map((task) => {
@@ -332,12 +370,155 @@ form.addEventListener("submit", (event) => {
     });
   }
 
-  saveTasks();
+  saveTasksToLocal();
   render();
-  resetForm();
+}
+
+async function deleteTask(taskId) {
+  if (firebaseReady) {
+    if (!currentUser) return;
+    await getTasksCollection(currentUser.uid).doc(taskId).delete();
+    return;
+  }
+
+  tasks = tasks.filter((task) => task.id !== taskId);
+  saveTasksToLocal();
+  render();
+}
+
+async function moveTaskToStatus(taskId, status) {
+  if (firebaseReady) {
+    if (!currentUser) return;
+    await getTasksCollection(currentUser.uid).doc(taskId).update({
+      status,
+      updatedAt: new Date().toISOString()
+    });
+    return;
+  }
+
+  tasks = tasks.map((task) => {
+    if (task.id !== taskId) return task;
+    return {
+      ...task,
+      status,
+      updatedAt: new Date().toISOString()
+    };
+  });
+  saveTasksToLocal();
+  render();
+}
+
+function startTaskSync(uid) {
+  if (unsubscribeTasks) {
+    unsubscribeTasks();
+    unsubscribeTasks = null;
+  }
+
+  unsubscribeTasks = getTasksCollection(uid).onSnapshot(
+    (snapshot) => {
+      tasks = snapshot.docs.map((doc) => {
+        return normalizeTask({ id: doc.id, ...doc.data() });
+      });
+      render();
+    },
+    () => {
+      setAuthStatus("동기화 중 오류가 발생했습니다.", true);
+    }
+  );
+}
+
+function stopTaskSync() {
+  if (unsubscribeTasks) {
+    unsubscribeTasks();
+    unsubscribeTasks = null;
+  }
+}
+
+function updateAuthUI() {
+  if (currentUser) {
+    logoutWrap.classList.remove("hidden");
+    setTaskFormEnabled(true);
+    authEmailInput.value = currentUser.email || "";
+    authPasswordInput.value = "";
+    setAuthStatus(`로그인됨: ${currentUser.email}`);
+  } else {
+    logoutWrap.classList.add("hidden");
+    if (firebaseReady) {
+      setTaskFormEnabled(false);
+      setAuthStatus("로그인 후 사용자별 데이터가 동기화됩니다.");
+    }
+  }
+}
+
+function initFirebaseMode() {
+  const hasConfig =
+    typeof window.FIREBASE_CONFIG === "object" &&
+    window.FIREBASE_CONFIG &&
+    typeof window.FIREBASE_CONFIG.apiKey === "string";
+
+  if (!window.firebase || !hasConfig) {
+    firebaseReady = false;
+    tasks = loadTasksFromLocal();
+    setTaskFormEnabled(true);
+    setAuthStatus("Firebase 설정이 없어 현재 기기 로컬 저장 모드입니다.", true);
+    render();
+    return;
+  }
+
+  try {
+    if (!window.firebase.apps.length) {
+      window.firebase.initializeApp(window.FIREBASE_CONFIG);
+    }
+
+    auth = window.firebase.auth();
+    db = window.firebase.firestore();
+    firebaseReady = true;
+
+    auth.onAuthStateChanged((user) => {
+      currentUser = user;
+      updateAuthUI();
+
+      if (user) {
+        startTaskSync(user.uid);
+      } else {
+        stopTaskSync();
+        tasks = [];
+        render();
+      }
+    });
+  } catch {
+    firebaseReady = false;
+    tasks = loadTasksFromLocal();
+    setTaskFormEnabled(true);
+    setAuthStatus("Firebase 초기화에 실패해 로컬 저장 모드로 전환했습니다.", true);
+    render();
+  }
+}
+
+form.addEventListener("submit", async (event) => {
+  event.preventDefault();
+
+  const title = titleInput.value.trim();
+  if (!title) return;
+
+  const payload = {
+    title,
+    description: descriptionInput.value.trim(),
+    priority: priorityInput.value,
+    status: statusInput.value,
+    dueDate: dueDateInput.value
+  };
+
+  try {
+    await upsertTask(payload, idInput.value);
+    resetForm();
+  } catch {
+    setAuthStatus("저장 중 오류가 발생했습니다.", true);
+  }
 });
 
 resetBtn.addEventListener("click", resetForm);
+
 filterViewInput.addEventListener("change", () => {
   filters.view = filterViewInput.value;
   render();
@@ -356,6 +537,63 @@ filterPriorityInput.addEventListener("change", () => {
 filterDateInput.addEventListener("change", () => {
   filters.date = filterDateInput.value;
   render();
+});
+
+loginBtn.addEventListener("click", async () => {
+  if (!firebaseReady) {
+    setAuthStatus("Firebase 설정 후 로그인 기능을 사용할 수 있습니다.", true);
+    return;
+  }
+
+  const email = authEmailInput.value.trim();
+  const password = authPasswordInput.value;
+
+  if (!email || !password) {
+    setAuthStatus("이메일과 비밀번호를 입력해 주세요.", true);
+    return;
+  }
+
+  try {
+    await auth.signInWithEmailAndPassword(email, password);
+  } catch {
+    setAuthStatus("로그인에 실패했습니다. 계정을 확인해 주세요.", true);
+  }
+});
+
+signupBtn.addEventListener("click", async () => {
+  if (!firebaseReady) {
+    setAuthStatus("Firebase 설정 후 회원가입 기능을 사용할 수 있습니다.", true);
+    return;
+  }
+
+  const email = authEmailInput.value.trim();
+  const password = authPasswordInput.value;
+
+  if (!email || !password) {
+    setAuthStatus("이메일과 비밀번호를 입력해 주세요.", true);
+    return;
+  }
+
+  if (password.length < 6) {
+    setAuthStatus("비밀번호는 6자 이상이어야 합니다.", true);
+    return;
+  }
+
+  try {
+    await auth.createUserWithEmailAndPassword(email, password);
+  } catch {
+    setAuthStatus("회원가입에 실패했습니다. 이미 가입된 이메일인지 확인해 주세요.", true);
+  }
+});
+
+logoutBtn.addEventListener("click", async () => {
+  if (!firebaseReady) return;
+
+  try {
+    await auth.signOut();
+  } catch {
+    setAuthStatus("로그아웃 중 오류가 발생했습니다.", true);
+  }
 });
 
 Object.entries(lists).forEach(([status, zone]) => {
@@ -377,8 +615,8 @@ Object.entries(lists).forEach(([status, zone]) => {
     const taskId = event.dataTransfer.getData("text/plain");
     if (!taskId) return;
 
-    moveTaskToStatus(taskId, status);
+    void moveTaskToStatus(taskId, status);
   });
 });
 
-render();
+initFirebaseMode();

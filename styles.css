@@ -85,6 +85,25 @@ body {
   color: #f0f2ff;
 }
 
+.auth-panel {
+  margin-bottom: 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #3a4059;
+}
+
+.auth-panel .actions {
+  margin-top: 4px;
+}
+
+#auth-status {
+  display: block;
+  margin-top: 8px;
+}
+
+#auth-status.error {
+  color: #ff9fb3;
+}
+
 label {
   display: block;
   margin-bottom: 6px;
