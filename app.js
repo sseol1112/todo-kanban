@@ -18,6 +18,7 @@ const filterPriorityInput = document.getElementById("filter-priority");
 const filterDateInput = document.getElementById("filter-date");
 
 const authEmailInput = document.getElementById("auth-email");
+const authNicknameInput = document.getElementById("auth-nickname");
 const authPasswordInput = document.getElementById("auth-password");
 const loginBtn = document.getElementById("login-btn");
 const signupBtn = document.getElementById("signup-btn");
@@ -440,11 +441,15 @@ function stopTaskSync() {
 
 function updateAuthUI() {
   if (currentUser) {
+    const welcomeName =
+      (currentUser.displayName && currentUser.displayName.trim()) ||
+      (currentUser.email ? currentUser.email.split("@")[0] : "사용자");
     authInputArea.classList.add("hidden");
     welcomeMessage.classList.remove("hidden");
-    welcomeMessage.textContent = `${currentUser.email}님 환영합니다!`;
+    welcomeMessage.textContent = `${welcomeName}님 환영합니다!`;
     logoutWrap.classList.remove("hidden");
     setTaskFormEnabled(true);
+    authNicknameInput.value = currentUser.displayName || "";
     authEmailInput.value = currentUser.email || "";
     authPasswordInput.value = "";
     setAuthStatus("");
@@ -453,6 +458,8 @@ function updateAuthUI() {
     welcomeMessage.classList.add("hidden");
     welcomeMessage.textContent = "";
     logoutWrap.classList.add("hidden");
+    authNicknameInput.value = "";
+    authPasswordInput.value = "";
     if (firebaseReady) {
       setTaskFormEnabled(false);
       setAuthStatus("로그인 후 사용자별 데이터가 동기화됩니다.");
@@ -558,6 +565,7 @@ loginBtn.addEventListener("click", async () => {
   }
 
   const email = authEmailInput.value.trim();
+  const nickname = authNicknameInput.value.trim();
   const password = authPasswordInput.value;
 
   if (!email || !password) {
@@ -586,13 +594,22 @@ signupBtn.addEventListener("click", async () => {
     return;
   }
 
+  if (!nickname) {
+    setAuthStatus("회원가입 시 닉네임을 입력해 주세요.", true);
+    return;
+  }
+
   if (password.length < 6) {
     setAuthStatus("비밀번호는 6자 이상이어야 합니다.", true);
     return;
   }
 
   try {
-    await auth.createUserWithEmailAndPassword(email, password);
+    const cred = await auth.createUserWithEmailAndPassword(email, password);
+    if (cred.user) {
+      await cred.user.updateProfile({ displayName: nickname });
+      await cred.user.reload();
+    }
   } catch {
     setAuthStatus("회원가입에 실패했습니다. 이미 가입된 이메일인지 확인해 주세요.", true);
   }
