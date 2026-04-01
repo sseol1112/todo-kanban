@@ -29,6 +29,8 @@ body {
   width: 100%;
 }
 
+a {text-decoration: none; color: #000;}
+
 body {
   margin: 0;
   color: var(--text);
@@ -40,6 +42,8 @@ body {
   max-width: 1280px;
   margin: 0 auto;
   padding: 22px 20px 12px;
+  display: flex;
+  justify-content: space-between;
 }
 
 .topbar h1 {
@@ -48,6 +52,13 @@ body {
   font-weight: 800;
   letter-spacing: 0.1px;
   color: #f3f5ff;
+}
+
+.topbar .btn-home {  
+  font-weight: 800;
+  letter-spacing: 0.1px;
+  color: #f3f5ff;
+  font-size: clamp(1.3rem, 1.05vw + 1rem, 1.9rem);
 }
 
 .container {
@@ -361,15 +372,15 @@ button {
 }
 
 .task[data-priority="high"] {
-  border-left-color: var(--basic);
+  border-left-color: var(--high);
 }
 
 .task[data-priority="medium"] {
-  border-left-color: var(--basic);
+  border-left-color: var(--medium);
 }
 
 .task[data-priority="low"] {
-  border-left-color: var(--basic);
+  border-left-color: var(--low);
 }
 
 .task-head {

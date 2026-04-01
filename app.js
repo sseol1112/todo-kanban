@@ -626,7 +626,7 @@ signupBtn.addEventListener("click", async () => {
 
   if (!isSignupMode) {
     setSignupMode(true);
-    setAuthStatus("닉네임을 입력한 뒤 회원가입 버튼을 한 번 더 눌러주세요.");
+    setAuthStatus("닉네임을 입력한 뒤 가입완료 버튼을 눌러주세요.");
     authNicknameInput.focus();
     return;
   }
