@@ -33,18 +33,7 @@
 2. `Authentication > Sign-in method`에서 `Email/Password` 활성화
 3. `Firestore Database` 생성
 4. 루트의 `firebase-config.js`에 웹 앱 설정 값 입력
-5. Firestore 보안 규칙을 아래처럼 적용
-
-```txt
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    match /users/{userId}/tasks/{taskId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
-    }
-  }
-}
-```
+5. Firestore 보안 규칙은 루트의 `firestore.rules` 파일 내용을 그대로 적용
 
 설정이 없으면 앱은 자동으로 로컬 저장 모드로 동작합니다.
 
@@ -54,4 +43,6 @@ service cloud.firestore {
 - `styles.css`: 스타일
 - `app.js`: 인증/동기화/드래그앤드롭/CRUD 로직
 - `firebase-config.js`: Firebase 웹 SDK 설정값
+- `firestore.rules`: Firestore 보안 규칙
+- `FIREBASE_SETUP.md`: Firebase 빠른 설정 가이드
 - `.github/workflows/deploy.yml`: GitHub Pages 배포 워크플로
