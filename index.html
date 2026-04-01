@@ -11,7 +11,8 @@
 </head>
 <body>
   <header class="topbar">
-    <h1>To-do Works List Board</h1>    
+    <h1>To-do Works List Board</h1>
+    <a class="btn-home" href="./index.html">Home</a>    
   </header>
 
   <main class="container">
@@ -19,8 +20,10 @@
       <h2>계정</h2>
       <div class="auth-panel">
         <div id="auth-input-area">
-          <label for="auth-nickname">닉네임(회원가입 시)</label>
-          <input id="auth-nickname" type="text" placeholder="닉네임" autocomplete="nickname" />
+          <div id="auth-nickname-wrap" class="hidden">
+            <label for="auth-nickname">닉네임(회원가입 시)</label>
+            <input id="auth-nickname" type="text" placeholder="닉네임" autocomplete="nickname" />
+          </div>
 
           <label for="auth-email">이메일</label>
           <input id="auth-email" type="email" placeholder="you@example.com" autocomplete="email" />

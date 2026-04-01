@@ -18,6 +18,7 @@ const filterPriorityInput = document.getElementById("filter-priority");
 const filterDateInput = document.getElementById("filter-date");
 
 const authEmailInput = document.getElementById("auth-email");
+const authNicknameWrap = document.getElementById("auth-nickname-wrap");
 const authNicknameInput = document.getElementById("auth-nickname");
 const authPasswordInput = document.getElementById("auth-password");
 const loginBtn = document.getElementById("login-btn");
@@ -56,6 +57,8 @@ let auth = null;
 let db = null;
 let currentUser = null;
 let unsubscribeTasks = null;
+let postAuthMessage = "";
+let isSignupMode = false;
 
 function loadTasksFromLocal() {
   try {
@@ -84,6 +87,28 @@ function setTaskFormEnabled(enabled) {
   controls.forEach((control) => {
     control.disabled = !enabled;
   });
+}
+
+function isValidEmail(email) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+function isValidPassword(password) {
+  const hasMinLength = password.length >= 8;
+  const hasUpper = /[A-Z]/.test(password);
+  const hasLower = /[a-z]/.test(password);
+  const hasNumber = /[0-9]/.test(password);
+  const hasSpecial = /[^A-Za-z0-9]/.test(password);
+  return hasMinLength && hasUpper && hasLower && hasNumber && hasSpecial;
+}
+
+function setSignupMode(enabled) {
+  isSignupMode = enabled;
+  authNicknameWrap.classList.toggle("hidden", !enabled);
+  signupBtn.textContent = enabled ? "가입 완료" : "회원가입";
+  if (!enabled) {
+    authNicknameInput.value = "";
+  }
 }
 
 function getPriorityOrder(priority) {
@@ -445,6 +470,7 @@ function updateAuthUI() {
       (currentUser.displayName && currentUser.displayName.trim()) ||
       (currentUser.email ? currentUser.email.split("@")[0] : "사용자");
     authInputArea.classList.add("hidden");
+    setSignupMode(false);
     welcomeMessage.classList.remove("hidden");
     welcomeMessage.textContent = `${welcomeName}님 환영합니다!`;
     logoutWrap.classList.remove("hidden");
@@ -452,9 +478,15 @@ function updateAuthUI() {
     authNicknameInput.value = currentUser.displayName || "";
     authEmailInput.value = currentUser.email || "";
     authPasswordInput.value = "";
-    setAuthStatus("");
+    if (postAuthMessage) {
+      setAuthStatus(postAuthMessage);
+      postAuthMessage = "";
+    } else {
+      setAuthStatus("");
+    }
   } else {
     authInputArea.classList.remove("hidden");
+    setSignupMode(false);
     welcomeMessage.classList.add("hidden");
     welcomeMessage.textContent = "";
     logoutWrap.classList.add("hidden");
@@ -564,12 +596,18 @@ loginBtn.addEventListener("click", async () => {
     return;
   }
 
+  setSignupMode(false);
+
   const email = authEmailInput.value.trim();
-  const nickname = authNicknameInput.value.trim();
   const password = authPasswordInput.value;
 
   if (!email || !password) {
     setAuthStatus("이메일과 비밀번호를 입력해 주세요.", true);
+    return;
+  }
+
+  if (!isValidEmail(email)) {
+    setAuthStatus("이메일 형식을 확인해주세요.", true);
     return;
   }
 
@@ -586,11 +624,24 @@ signupBtn.addEventListener("click", async () => {
     return;
   }
 
+  if (!isSignupMode) {
+    setSignupMode(true);
+    setAuthStatus("닉네임을 입력한 뒤 회원가입 버튼을 한 번 더 눌러주세요.");
+    authNicknameInput.focus();
+    return;
+  }
+
   const email = authEmailInput.value.trim();
+  const nickname = authNicknameInput.value.trim();
   const password = authPasswordInput.value;
 
   if (!email || !password) {
     setAuthStatus("이메일과 비밀번호를 입력해 주세요.", true);
+    return;
+  }
+
+  if (!isValidEmail(email)) {
+    setAuthStatus("이메일 형식을 확인해주세요.", true);
     return;
   }
 
@@ -599,8 +650,8 @@ signupBtn.addEventListener("click", async () => {
     return;
   }
 
-  if (password.length < 6) {
-    setAuthStatus("비밀번호는 6자 이상이어야 합니다.", true);
+  if (!isValidPassword(password)) {
+    setAuthStatus("비밀번호는 8자 이상, 영문 대/소문자, 숫자, 특수문자를 포함해야 합니다.", true);
     return;
   }
 
@@ -609,6 +660,8 @@ signupBtn.addEventListener("click", async () => {
     if (cred.user) {
       await cred.user.updateProfile({ displayName: nickname });
       await cred.user.reload();
+      postAuthMessage = "회원가입이 완료되었습니다!";
+      setSignupMode(false);
     }
   } catch {
     setAuthStatus("회원가입에 실패했습니다. 이미 가입된 이메일인지 확인해 주세요.", true);
