@@ -55,10 +55,10 @@ body {
 }
 
 .topbar .btn-home {  
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: 0.1px;
   color: #f3f5ff;
-  font-size: clamp(1.3rem, 1.05vw + 1rem, 1.9rem);
+  font-size: clamp(1.2rem, 1.025vw + 0.8rem, 1.8rem);
 }
 
 .container {
