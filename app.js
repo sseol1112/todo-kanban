@@ -23,6 +23,8 @@ const loginBtn = document.getElementById("login-btn");
 const signupBtn = document.getElementById("signup-btn");
 const logoutBtn = document.getElementById("logout-btn");
 const logoutWrap = document.getElementById("logout-wrap");
+const authInputArea = document.getElementById("auth-input-area");
+const welcomeMessage = document.getElementById("welcome-message");
 const authStatus = document.getElementById("auth-status");
 
 const lists = {
@@ -70,8 +72,10 @@ function saveTasksToLocal() {
 }
 
 function setAuthStatus(message, isError = false) {
-  authStatus.textContent = message;
+  const text = message || "";
+  authStatus.textContent = text;
   authStatus.classList.toggle("error", isError);
+  authStatus.classList.toggle("hidden", text.length === 0);
 }
 
 function setTaskFormEnabled(enabled) {
@@ -436,16 +440,24 @@ function stopTaskSync() {
 
 function updateAuthUI() {
   if (currentUser) {
+    authInputArea.classList.add("hidden");
+    welcomeMessage.classList.remove("hidden");
+    welcomeMessage.textContent = `${currentUser.email}님 환영합니다!`;
     logoutWrap.classList.remove("hidden");
     setTaskFormEnabled(true);
     authEmailInput.value = currentUser.email || "";
     authPasswordInput.value = "";
-    setAuthStatus(`로그인됨: ${currentUser.email}`);
+    setAuthStatus("");
   } else {
+    authInputArea.classList.remove("hidden");
+    welcomeMessage.classList.add("hidden");
+    welcomeMessage.textContent = "";
     logoutWrap.classList.add("hidden");
     if (firebaseReady) {
       setTaskFormEnabled(false);
       setAuthStatus("로그인 후 사용자별 데이터가 동기화됩니다.");
+    } else {
+      setTaskFormEnabled(true);
     }
   }
 }

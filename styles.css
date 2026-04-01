@@ -104,6 +104,13 @@ body {
   color: #ff9fb3;
 }
 
+.welcome {
+  margin: 0 0 8px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #e7eaff;
+}
+
 label {
   display: block;
   margin-bottom: 6px;

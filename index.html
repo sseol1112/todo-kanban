@@ -18,16 +18,20 @@
     <section class="panel form-panel">
       <h2>계정</h2>
       <div class="auth-panel">
-        <label for="auth-email">이메일</label>
-        <input id="auth-email" type="email" placeholder="you@example.com" autocomplete="email" />
+        <div id="auth-input-area">
+          <label for="auth-email">이메일</label>
+          <input id="auth-email" type="email" placeholder="you@example.com" autocomplete="email" />
 
-        <label for="auth-password">비밀번호</label>
-        <input id="auth-password" type="password" placeholder="비밀번호" autocomplete="current-password" />
+          <label for="auth-password">비밀번호</label>
+          <input id="auth-password" type="password" placeholder="비밀번호" autocomplete="current-password" />
 
-        <div class="actions">
-          <button type="button" id="login-btn">로그인</button>
-          <button type="button" id="signup-btn" class="ghost">회원가입</button>
+          <div class="actions">
+            <button type="button" id="login-btn">로그인</button>
+            <button type="button" id="signup-btn" class="ghost">회원가입</button>
+          </div>
         </div>
+
+        <p class="welcome hidden" id="welcome-message"></p>
 
         <div class="actions hidden" id="logout-wrap">
           <button type="button" id="logout-btn" class="ghost">로그아웃</button>
